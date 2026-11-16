@@ -2,69 +2,91 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
-  <meta name="theme-color" content="#0b1318">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#0b1519">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>جبهة الصفر | ZERO FRONTIER</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="General Zero Mobile - معارك استراتيجية كاملة للمتصفح، عمودي أو أفقي، تعمل دون إنترنت.">
+  
+  
+  <link rel="manifest" href="manifest.webmanifest?v=2.0.0">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css?v=2.0.0">
+  <title>GENERAL ZERO MOBILE | قيادة المعركة</title>
 </head>
 <body>
-  <div id="gameRoot">
-    <canvas id="gameCanvas" aria-label="ساحة المعركة"></canvas>
-    <div id="hud" class="hidden">
-      <div id="topbar">
-        <div class="brand">جبهة <em>الصفر</em> <small>ZERO FRONTIER</small></div>
-        <div class="stat"><span>الرصيد</span><b id="money">0</b><i>◈</i></div>
-        <div class="stat hideSmall"><span>الدخل</span><b id="income">+0/ث</b></div>
-        <div class="stat"><span>الجيش</span><b id="unitCount">0</b></div>
-        <div class="stat hideSmall"><span>القواعد</span><b id="baseCount">0:0</b></div>
-        <div class="spacer"></div>
-        <button id="selectArmy" class="topBtn" title="تحديد كامل الجيش">☷ <span>الجيش</span></button>
-        <button id="attackMove" class="topBtn" title="تفعيل هجوم أثناء التحرك">⌖ <span>هجوم</span></button>
-        <button id="pauseBtn" class="topBtn" title="إيقاف مؤقت">Ⅱ</button>
+<div id="gameRoot">
+  <canvas id="gameCanvas" aria-label="ساحة المعركة الاستراتيجية"></canvas>
+  <div id="hud" class="hidden">
+    <header id="topbar">
+      <div class="brand"><span class="brandBadge">GZ</span><span class="brandWords"><b>GENERAL <em>ZERO</em></b><small>MOBILE COMMAND • <span id="versionSmall">2.0</span></small></span></div>
+      <div class="statusPill gold"><span class="statIcon">◆</span><span class="statusLabel">الأرصدة</span><b id="money">0</b></div>
+      <div class="statusPill incomePill"><span class="statIcon">↗</span><span class="statusLabel">الدخل</span><b id="income">+0/ث</b></div>
+      <div class="statusPill"><span class="statIcon">▣</span><span class="statusLabel">الوحدات</span><b id="unitCount">0</b></div>
+      <div class="statusPill bases"><span class="statusLabel">الفرق</span><b id="baseCount">0:0</b></div>
+      <div class="topActions">
+        <button id="selectArea" class="topBtn" title="تحديد مجموعة بمستطيل">▱ <span>تحديد</span></button>
+        <button id="selectArmy" class="topBtn" title="تحديد كل وحداتك">◉ <span>الجيش</span></button>
+        <button id="attackMove" class="topBtn" title="هجوم أثناء التحرك">⌖ <span>هجوم</span></button>
+        <button id="pauseBtn" class="topBtn iconOnly" title="إيقاف مؤقت">Ⅱ</button>
       </div>
-      <div id="notification"></div>
-      <div id="leftTools">
-        <button id="zoomIn" title="تقريب">＋</button>
-        <button id="zoomOut" title="إبعاد">−</button>
-        <button id="centerBase" title="العودة للقاعدة">⌂</button>
-      </div>
-      <div id="bottomArea">
-        <div id="selectionInfo"><div class="selectionTitle" id="selectedTitle">القيادة العسكرية</div><div id="selectedDetails">ابنِ قاعدتك، ثم أنتج القوات ودافع عنها.</div></div>
-        <div id="actionPanel"><div id="panelTabs"><button class="panelTab active" data-tab="build">▤ البناء</button><button class="panelTab" data-tab="units">⚔ القوات</button></div><div id="actionBar"></div></div>
-        <div class="miniWrap"><canvas id="minimap" width="195" height="100" title="خريطة مصغرة"></canvas><div id="matchClock">00:00</div></div>
-      </div>
-      <button id="cancelMode" class="hidden">✕ إلغاء الأمر</button>
-      <div id="hoverNote" class="hidden"></div>
+    </header>
+    <div id="notification" role="status" aria-live="polite"></div>
+    <div id="leftTools" aria-label="تحكم الخريطة">
+      <button id="zoomIn" aria-label="تكبير الخريطة">＋</button>
+      <button id="zoomOut" aria-label="تصغير الخريطة">−</button>
+      <button id="centerBase" aria-label="الرجوع للقاعدة">⌂</button>
     </div>
-    <div id="startScreen" class="screen">
-      <div class="menuBackdrop"></div>
-      <div class="menuShell">
-        <div class="eyebrow">TACTICAL COMMAND • MOBILE RTS • v0.1</div>
-        <h1>جبهة <span>الصفر</span></h1>
-        <p class="tagline">ابنِ القاعدة، شكّل الجيش، وانتصر. معارك استراتيجية سريعة للجوال.</p>
-        <div class="configTitle">اختر حجم المعركة</div>
-        <div class="choices" id="mapChoices">
-          <button data-map="duel" class="choice active"><b>1 × 1</b><small>وادي الرماد</small></button>
-          <button data-map="squads" class="choice"><b>2 × 2</b><small>حدود الحديد</small></button>
-          <button data-map="war" class="choice"><b>4 × 4</b><small>العاصفة الكبرى</small></button>
-        </div>
-        <div class="configRow"><div><div class="configTitle">اختر الجيش</div><div class="choices compact" id="factionChoices">
-          <button class="choice active" data-faction="alliance">التحالف</button><button class="choice" data-faction="legion">الفيلق</button><button class="choice" data-faction="rebels">المقاومة</button>
-        </div></div><div><div class="configTitle">ذكاء الخصم</div><div class="choices compact" id="difficultyChoices">
-          <button class="choice" data-diff="easy">سهل</button><button class="choice active" data-diff="normal">متوسط</button><button class="choice" data-diff="hard">صعب</button>
-        </div></div></div>
-        <button id="startBtn" class="primary">ابدأ المعركة <span>←</span></button>
-        <p class="hint">المس وحدة لتحديدها ثم المس الأرض للتحريك. اسحب الأرض لتحريك الكاميرا. استخدم «الجيش» لتحديد جميع قواتك.</p>
+    <div id="objectiveCard"><span class="liveDot"></span><span id="objectiveText">ابنِ اقتصادك وقوّاتك، ثم دمّر مراكز العدو.</span></div>
+    <section id="bottomArea" aria-label="لوحة القيادة">
+      <div class="miniWrap"><div class="minimapHeading"><b>الميدان</b><time id="matchClock">00:00</time></div><canvas id="minimap" width="200" height="112" title="المس الخريطة للانتقال"></canvas></div>
+      <div id="selectionInfo"><div class="selectionEyebrow">الاستخبارات التكتيكية</div><div class="selectionTitle" id="selectedTitle">مركز القيادة</div><div id="selectedDetails">ابنِ البنية العسكرية وسيطر على الموارد.</div></div>
+      <div id="actionPanel">
+        <nav id="panelTabs" aria-label="تصنيفات الأوامر">
+          <button class="panelTab active" data-tab="build">▤ <span>الإنشاءات</span></button>
+          <button class="panelTab" data-tab="units">♜ <span>القوات</span></button>
+          <button class="panelTab" data-tab="tech">⬡ <span>التطوير</span></button>
+          <button class="panelTab" data-tab="command">⌖ <span>الدعم</span></button>
+        </nav>
+        <div id="actionBar" aria-live="polite"></div>
       </div>
-    </div>
-    <div id="endScreen" class="screen hidden"><div class="endPanel"><div id="endIcon">✦</div><h2 id="endTitle"></h2><p id="endDetails"></p><button id="restartBtn" class="primary">معركة جديدة ↻</button></div></div>
-    <div id="portraitGuard"><div class="rotateIcon">↻</div><h2>دوّر الهاتف للوضع الأفقي</h2><p>اللعبة مصمّمة للشاشة بالعرض</p></div>
-    <div id="pauseOverlay" class="hidden"><div class="pauseCard"><h2>المعركة متوقفة</h2><button id="resumeBtn" class="primary">متابعة</button><button id="exitBtn" class="secondary">القائمة الرئيسية</button></div></div>
+    </section>
+    <button id="cancelMode" class="hidden">✕ إلغاء الأمر</button>
+    <div id="hoverNote" class="hidden"></div>
   </div>
-  <script src="game.js"></script>
-  <script>if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("./sw.js").catch(()=>{});</script>
+  <div id="startScreen" class="screen">
+    <div class="menuBackdrop" aria-hidden="true"><div class="menuGrid"></div><div class="menuHorizon"></div><div class="menuSun"></div><div class="menuTerrain"></div></div>
+    <div class="menuShell">
+      <div class="eyebrow"><span class="liveDot"></span> COMMAND OPERATIONS CENTER <span class="versionTag">v2.0</span></div>
+      <div class="menuTitle"><div class="menuLogo">GZ<span>•</span></div><div><h1>GENERAL <span>ZERO</span></h1><div class="menuSub">MOBILE <b>TACTICAL WARFARE</b></div></div></div>
+      <p class="tagline">ابنِ قاعدتك • أدر الموارد • قد جيوشك • اكسب الحرب</p>
+      <div class="configTitle">01 / اختر ساحة المعركة</div>
+      <div class="choices maps" id="mapChoices">
+        <button data-map="duel" class="choice active"><span class="mapPreview desert"><i></i><i></i></span><b>1 ضد 1</b><small>وادي الرماد</small></button>
+        <button data-map="squads" class="choice"><span class="mapPreview hills"><i></i><i></i><i></i></span><b>2 ضد 2</b><small>حدود الحديد</small></button>
+        <button data-map="war" class="choice"><span class="mapPreview plateau"><i></i><i></i><i></i></span><b>4 ضد 4</b><small>العاصفة الكبرى</small></button>
+      </div>
+      <div class="configRow">
+        <div><div class="configTitle">02 / الجيش</div><div class="choices compact" id="factionChoices">
+          <button class="choice active" data-faction="alliance"><span class="factionDot alliance"></span>التحالف</button>
+          <button class="choice" data-faction="legion"><span class="factionDot legion"></span>الفيلق</button>
+          <button class="choice" data-faction="rebels"><span class="factionDot rebels"></span>المقاومة</button>
+        </div></div>
+        <div><div class="configTitle">03 / صعوبة الخصم</div><div class="choices compact" id="difficultyChoices">
+          <button class="choice" data-diff="easy">سهل</button><button class="choice active" data-diff="normal">متوسط</button><button class="choice" data-diff="hard">صعب</button>
+        </div></div>
+      </div>
+      <button id="startBtn" class="primary">بدء العملية <span>←</span></button>
+      <div class="menuFooter"><span>◉ تخطيط تكتيكي لحظي</span><span>◉ لمس / فأرة</span><span>◉ عمودي + أفقي</span><span>◉ أوفلاين</span></div>
+    </div>
+  </div>
+  <div id="endScreen" class="screen hidden"><div class="endPanel"><div id="endIcon">✦</div><div class="eyebrow">MISSION REPORT</div><h2 id="endTitle"></h2><p id="endDetails"></p><button id="restartBtn" class="primary">معركة جديدة ↻</button></div></div>
+  <div id="pauseOverlay" class="hidden"><div class="pauseCard"><span class="eyebrow">COMMAND PAUSED</span><h2>المعركة متوقفة</h2><p>خذ وقتك، القوات بانتظار أوامرك.</p><button id="resumeBtn" class="primary">متابعة المعركة ▶</button><button id="exitBtn" class="secondary">العودة للقائمة</button></div></div>
+  <div id="updateToast" class="hidden" role="status"><span>✦ يوجد إصدار جديد للعبة</span><button id="updateNow">تحديث الآن</button></div>
+</div>
+<script src="game.js?v=2.0.0"></script>
+<script src="pwa.js?v=2.0.0" defer></script>
+
 </body>
 </html>

@@ -1,39 +1,20 @@
-# خطة تحويل جبهة الصفر من النسخة الأولى إلى إصدار مكتمل
+# Roadmap — General Zero Mobile
 
-## القاعدة المعمارية التي اعتمدناها
-- **3 خرائط مصقولة فقط:** 1 ضد 1، 2 ضد 2، 4 ضد 4.
-- **محرك قتال واحد** لجميع الفرق والجيوش، و**نظام قرارات AI واحد** تختلف معاييره بالصعوبة.
-- **محاكاة ثنائية الأبعاد وتصور 2.5D** بالـ Canvas: أسرع على الهواتف من إجبارها على 3D كامل.
-- **كل اللعب دون اتصال** في ملف مستقل؛ الاستضافة والتثبيت على الشاشة الرئيسية اختياريان.
-- **التفاصيل التكتيكية أولاً:** أوامر الوحدات + المسار + الاقتصاد + التوازن قبل الزخارف.
+## Implemented in v2
+- Responsive command UI in portrait and landscape, three maps and three AI difficulties.
+- Enhanced Canvas battlefield details, roads, rocks, resource crystals, vehicles and buildings.
+- Tactical support: artillery strike + reinforcements; economy, 3 research upgrades, rally points and selection box.
+- Cached A* navigation with a binary heap, capped rendering pixel ratio on large matches.
+- PWA cache versioning with network-first resources and offline fallback; safe refresh when updates arrive.
+- Browser regression tests for orientations, building/training, battle outcomes and no runtime exceptions.
 
-## ما نعدّه جاهزاً الآن (الإصدار الأول v0.1)
-- [x] اختيار ثلاث الخرائط وثلاثة الفصائل وثلاث صعوبات.
-- [x] اللعب بفريق بشري واحد وأعضاء من الكمبيوتر ضد الكمبيوتر؛ 1v1 و2v2 و4v4.
-- [x] المقر وثكنة ومصنع ومصفاة وبرج؛ تكاليف ومتانة وبناء.
-- [x] قوات المشاة والقاذف والاستطلاع والدبابة والمدفعية والنخبة.
-- [x] الإنتاج والزمن والاقتصاد والمصفاة ونقاط بلورات الموارد.
-- [x] إطلاق النار والتصادم ومسار A* مبسط وأوامر فردية وجماعية.
-- [x] كاميرا، لمس، تكبير، خريطة مصغرة، فوز وخسارة.
-- [x] تشغيل محلي مستقل ودعم تثبيت نسخة PWA المستضافة.
-- [x] اختبارات متصفح أولية على الخرائط الثلاث ومعارك محاكاة 180 ثانية لكل خريطة.
+## Remaining requirements for a truly high-quality RTS
+1. Art-directed original high-quality 3D/2.5D sprite atlas and animations, original sounds.
+2. Harvesting vehicles, power infrastructure, richer tech trees and balancing.
+3. Fog of war and scouting, meaningful line of sight.
+4. Advanced AI coordinated attacks, defense, retreats and tactics.
+5. Better unit collision, formations, pathfinding and army control.
+6. Sustained physical-device performance profiling for 4v4 on iOS and Android.
+7. Campaign/scenarios and saving/resuming matches.
 
-## قبل اعتبار اللعبة إطلاقاً نهائياً
-- [ ] تطوير رسومات وأصوات أصلية محسّنة وواجهة مشذبة لجميع أحجام الشاشة.
-- [ ] توسيع القدرة التكتيكية مع المحافظة على نظام أوامر واحد (حراسة، استهداف، مهارات وحدات إضافية).
-- [ ] تعميق اختلاف الفصائل وتوزان قوة كل فصيل في 1v1 و2v2 و4v4.
-- [ ] اختبار اللعب الطبيعي مع لاعبين حقيقيين واختبار قابلية العثور على الموارد والنقر على الأوامر.
-- [ ] اختبارات طويلة (20–40 دقيقة) وتشبع الوحدات وضبط الذاكرة ومعدل الإطارات.
-- [ ] اختبار أجهزة iPhone وAndroid فعلية، Safari وChrome؛ قياس متوسط وP95 للإطارات.
-- [ ] معالجة جميع الأعطال والمشاكل المكتشفة في سجل واضح وإعادة الاختبار بعد كل إصلاح.
-- [ ] بناء اختبارات آلية إضافية للانتصار في مباراة حقيقية، تمركز الوحدات، توازن الموارد، ومنع انسداد المسارات.
-
-## معايير التسليم النهائي الواقعية
-1. كل الأنظمة المذكورة في وثيقة المواصفات تعمل من أول شاشة حتى ظهور نتيجة كل مباراة.
-2. صفر أخطاء **معروفة مؤثرة**، لا يوجد تعطل أو تجمد معروف، وكل اختبار آلي ينجح.
-3. هدف 60 FPS على قائمة أجهزة مرجعية متفق عليها؛ توثيق النتائج على الأجهزة لا على المحاكي فقط.
-4. لا خسارة وحدات بسبب تعلقها بممر أو احتجازها داخل مبنى عند معركة عادية.
-5. سهولة اللعب باللمس: جميع الأوامر الأساسية متاحة في 1–2 لمسات.
-6. لا أصول محمية أو تبعيات إنترنت لازمة لبدء اللعبة.
-
-> لا يمكن ضمان عدم وجود أي خطأ مستقبلي. يمكن فقط وضع معايير قبول موضوعية وإصلاح جميع الأخطاء المعروفة قبل الإطلاق.
+No false “zero bug” guarantee. This remains an early standalone game with significant work remaining versus C&C: Generals Zero Hour.

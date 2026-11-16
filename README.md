@@ -1,33 +1,14 @@
-# General Zero Mobile — جبهة الصفر
+# General Zero Mobile — v2.0
+An original, mobile-first RTS browser/PWA playable in landscape and portrait. Lightweight Canvas graphics; no commercial game assets.
 
-لعبة استراتيجية مستقلة من نوع **RTS** للجوال بالعرض، مستوحاة من أسلوب الألعاب الاستراتيجية الكلاسيكية، دون نسخ أصول لعبة تجارية.
+**An improved early build, not a complete or equivalent replica of Generals Zero Hour.**
 
-**هذه نسخة مبكرة قابلة للعب وليست إصداراً نهائياً خالياً من الأخطاء.**
+Features: 1v1 / 2v2 / 4v4 AI matches, three factions, easy/normal/hard, economy and base construction, six units, upgrades, tactical artillery, reinforcements, rally points, selection box, minimap, touch/pinch zoom.
 
-## التشغيل
-- افتح `index.html` عبر استضافة ثابتة، مثل Vercel.
-- أو افتح `ZERO_FRONTIER_OFFLINE.html` كملف مستقل في متصفح يدعم فتح ملفات HTML محلية.
-- للاختبار المحلي باستضافة HTTP: `python -m http.server 8000` ثم افتح `http://localhost:8000`.
+Deploy to Vercel: Import this repository; Framework: **Other**, Root: **./**, Build Command: blank; static files will be served directly.
 
-## المزايا الحالية
-- خرائط 1 ضد 1، 2 ضد 2، و4 ضد 4 (ضد الكمبيوتر، مع حلفاء كمبيوتر في الفرق).
-- ثلاث فصائل، وثلاث درجات صعوبة للخصم.
-- إنشاء منشآت، إنتاج قوات، اقتصاد موارد، معارك، خريطة مصغرة وتحكم باللمس.
-- دعم PWA للاستخدام بدون إنترنت بعد الزيارة الأولى (مع دعم المتصفح).
+PWA updates automatically on app launch and when returning online, using a network-first service worker. Mid-battle updates offer a reload prompt to avoid losing the match. **Reinstall is not required.** Bump versions in `sw.js`, `pwa.js`, and HTML's `?v=` on each release.
 
-## النشر على Vercel من GitHub
-1. أنشئ مشروعاً جديداً في Vercel ثم اختر **Import Git Repository**.
-2. حدد المستودع `general-zero-mobile`.
-3. **Framework Preset:** Other؛ **Root Directory:** `./`؛ **Build Command:** اتركه فارغاً؛ **Output Directory:** اتركه فارغاً.
-4. اضغط **Deploy**.
+Run `python test_e2e.py` and `python test_gameplay_v2.py` after `python build_offline.py` with Python Playwright+Chromium installed.
 
-ستُنشر ملفات HTML/CSS/JS الثابتة مباشرة، دون الحاجة لخادم أو قاعدة بيانات.
-
-## فحص سريع
-- فحص صحة JavaScript: `node --check game.js`.
-- اختبار E2E اختياري: `python test_e2e.py` بعد تثبيت Playwright وChromium؛ انظر `README_AR.md` للتفاصيل.
-
-## نطاق الإصدار
-هذه النسخة ليست لعبة متعددة اللاعبين عبر الشبكة، ولا تتضمن جميع أنواع المباني أو وحدات لعبة Generals Zero Hour، ولا تدّعي تطابقها معها. الهدف تطوير لعبة مستقلة سلسة ومكتملة تدريجياً.
-
-تفاصيل التشغيل والضوابط في [README_AR.md](README_AR.md)، وخطة العمل في [ROADMAP_AR.md](ROADMAP_AR.md).
+See [Arabic instructions](README_AR.md) and [roadmap](ROADMAP_AR.md).
