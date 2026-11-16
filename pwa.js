@@ -1,7 +1,7 @@
-/* PWA lifecycle v2.0.0 — reload when safe; otherwise prompt mid-battle. */
+/* PWA lifecycle v3.0.0 — reload when safe; otherwise prompt mid-battle. */
 (()=>{
  'use strict';
- const VERSION='2.0.0';
+ const VERSION='3.0.0';
  if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
  let refreshing=false,registration=null,prompted=false;
  function safe(){const g=window.__zeroFrontier?.game;return !g||g.paused||g.over;}

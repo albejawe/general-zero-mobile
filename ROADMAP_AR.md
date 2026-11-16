@@ -1,20 +1,35 @@
-# Roadmap — General Zero Mobile
+# خطة محكمة — General Zero Mobile
 
-## Implemented in v2
-- Responsive command UI in portrait and landscape, three maps and three AI difficulties.
-- Enhanced Canvas battlefield details, roads, rocks, resource crystals, vehicles and buildings.
-- Tactical support: artillery strike + reinforcements; economy, 3 research upgrades, rally points and selection box.
-- Cached A* navigation with a binary heap, capped rendering pixel ratio on large matches.
-- PWA cache versioning with network-first resources and offline fallback; safe refresh when updates arrive.
-- Browser regression tests for orientations, building/training, battle outcomes and no runtime exceptions.
+## الهدف
+لعبة RTS مستقلة ممتعة ومحترفة وسلسة للجوال عمودياً وأفقياً، ثلاث خرائط ثابتة (1v1/2v2/4v4) وثلاثة جيوش وثلاثة مستويات AI، مع حروب وقواعد واقتصاد عميق. لا نسخ ملفات اللعبة الأصلية.
 
-## Remaining requirements for a truly high-quality RTS
-1. Art-directed original high-quality 3D/2.5D sprite atlas and animations, original sounds.
-2. Harvesting vehicles, power infrastructure, richer tech trees and balancing.
-3. Fog of war and scouting, meaningful line of sight.
-4. Advanced AI coordinated attacks, defense, retreats and tactics.
-5. Better unit collision, formations, pathfinding and army control.
-6. Sustained physical-device performance profiling for 4v4 on iOS and Android.
-7. Campaign/scenarios and saving/resuming matches.
+## تشخيص فشل النسخ السابقة
+1. رسومات هندسية بدائية وعدم تميز الأسلحة والمباني.
+2. لا هدف للسيطرة على الخريطة، مما يضعف المتعة.
+3. وحدات AI الجديدة كانت تهجم مباشرة على مقر اللاعب وتنهي الجولة سريعاً.
+4. رسم تضاريس ثابتة بكل إطار وتداخل أزرار الجوال.
+5. اختبارات الكود وحدها لا تثبت المتعة أو الأداء الحقيقي.
 
-No false “zero bug” guarantee. This remains an early standalone game with significant work remaining versus C&C: Generals Zero Hour.
+## ما أصلحناه في ألفا 3.0
+- مراكز إمداد يجب السيطرة عليها تمنح اقتصاداً وكشفاً.
+- ضباب استطلاع، كشف متدرج، تفوق أسلحة ضد أنواع محددة ورتب وخبرة.
+- مروحيات ومهابط، فروق فعلية بين الجيوش، إصلاح وبيع، انتشار وتراجع وتثبيت.
+- تمهيد اقتصادي للذكاء ومنافسة على وسط الخريطة بدلاً من الهجوم الفوري.
+- رسم تضاريس ثابتة مخزن مسبقاً وشبكة مكانية لتسريع الاصطدام، ولوحة عمودية/أفقية قابلة للطي.
+- ملفات PWA مرقمة الإصدارات وتتحدث دون إعادة تنزيل التطبيق.
+
+## المراحل التالية (بوابات لا يجوز تخطيها)
+**1. فن احترافي:** إنتاج أطلس أصلي عالي الجودة لـ12 اتجاه حركة ومبانٍ ومؤثرات صوتية ورسوم تميّز الجيوش. قبول بعد معاينة صور حقيقية على الجوال وتأكيد وضوح الوحدات.
+
+**2. عمق ووضوح القتال:** غطاء وتموضع، خط رؤية فعلي، تراكيب فرق، اصطدامات ومسارات أفضل، وحدة إمداد وموارد ديناميكية. شرط القبول: 100 محاكاة لمعارك دون وحدات تعلق أو أوامر تضيع.
+
+**3. AI متوازن:** خصم يغير الخطط حسب السيطرة والتهديد، يشن موجات متزامنة، ينقذ قواعده ويستخدم مضادات، مع صعوبات عادلة ولا غش مخفي. شرط القبول: مباريات الفوز والخسارة منطقية ومتوازنة.
+
+**4. جودة استخدام:** شرح تفاعلي، حفظ واستكمال المعركة، أصوات ومؤشرات جيدة، شاشات متعددة ومساعدة أوامر اللمس. شرط القبول: لعب حقيقي بلا التباس في التحكم.
+
+**5. اختبار إطلاق:** 3×3 تكوينات طويلة؛ فحص آلاف أوامر البناء والإنتاج والتنقل؛ 4v4 بحد أدنى 150 وحدة؛ فحص الأداء واستهلاك الذاكرة على iPhone وAndroid فعليين؛ اختبار تثبيت PWA وأوفلاين وإصدار جديد بدون إعادة تثبيت. مستهدف 60 FPS في المعارك الصغيرة و45 FPS أو أكثر في 4v4 على أجهزة متوسطة حديثة، بعد قياس لا تخمين.
+
+## سياسة النشر
+نسخة احتياطية/وسم، اختبارات نجاح، نشر Vercel، ثم فحص الرابط. أي خطأ شديد P0/P1 يمنع التسليم. لا ضمان حرفي لصفر أخطاء؛ الهدف صفر أخطاء حرجة أو كبيرة معروفة عند الإطلاق.
+
+**الحالة:** Alpha v3 لا تزال بعيدة عن مستوى الرسومات والتفاصيل في Zero Hour. لا نعلن اكتمالها ولا نضيف خرائط غير ضرورية قبل إتقان الثلاث الموجودة.

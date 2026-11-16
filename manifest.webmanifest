@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "General Zero Mobile - القيادة العسكرية",
+  "name": "General Zero Mobile | عمليات عسكرية تكتيكية",
   "short_name": "General Zero",
-  "description": "استراتيجية للجوال عمودي وأفقي تعمل بدون إنترنت بعد التخزين",
+  "description": "لعبة استراتيجية مستقلة بثلاث جيوش وثلاث خرائط على الجوال بوضع عمودي وأفقي",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

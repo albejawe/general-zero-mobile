@@ -1,5 +1,5 @@
 /* Bump VERSION for each release; refresh an installed PWA without reinstall. */
-const VERSION='2.0.0';
+const VERSION='3.0.0';
 const CACHE='general-zero-mobile-'+VERSION;
 const PREFIX='general-zero-mobile-';
 const ASSETS=['./','./index.html','./styles.css?v='+VERSION,'./game.js?v='+VERSION,'./pwa.js?v='+VERSION,'./manifest.webmanifest?v='+VERSION,'./icon.svg'];

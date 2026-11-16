@@ -14,3 +14,26 @@
 #notification.show ~ #objectiveCard{opacity:0}
 
 @media(orientation:portrait) and (max-width:430px){.incomePill{display:none}}
+
+/* v3 — keep the battlefield central in portrait and landscape. */
+#panelToggle{position:absolute;z-index:5;bottom:calc(var(--bottom-h) + 1px);left:50%;transform:translateX(-50%);pointer-events:auto;border:1px solid #91b2a2;background:#142a31ec;color:#e6d5a8;width:46px;height:24px;line-height:19px;font-size:19px;border-radius:7px 7px 0 0;box-shadow:0 -4px 16px #0005}
+#gameRoot.compactHud{--bottom-h:47px}
+#gameRoot.compactHud #bottomArea{min-height:47px;height:47px;padding:6px 10px;gap:0;display:flex;align-items:center}
+#gameRoot.compactHud #bottomArea .miniWrap,#gameRoot.compactHud #selectionInfo,#gameRoot.compactHud #actionBar{display:none!important}
+#gameRoot.compactHud #actionPanel{width:100%;flex:1;max-height:39px;display:flex;align-items:center}
+#gameRoot.compactHud #panelTabs{height:35px;display:flex;justify-content:center;gap:8px;flex:1}
+#gameRoot.compactHud #panelTabs .panelTab{flex:1;max-width:170px;min-width:0;display:flex;justify-content:center;align-items:center;font-size:11px;border:1px solid #547b77}
+#gameRoot.compactHud #panelTabs .panelTab span{display:inline}
+#gameRoot.compactHud #cancelMode{bottom:56px}
+#gameRoot.compactHud #updateToast{bottom:56px}
+.sitePill{border-color:#c5a56a74;background:#483f2633}.sitePill .statIcon{color:#f6d58c}
+.perfPill{border-color:#648f8580}.perfPill b{color:#76ddaa;font-size:11px}
+#topbar{background:linear-gradient(180deg,#071417,#102a33f8);box-shadow:0 8px 19px #04121da8}
+#bottomArea{background:linear-gradient(0deg,#06121af7,#122c37f5)}
+#objectiveCard{box-shadow:0 4px 18px #06131ba8}
+#gameRoot:not(.compactHud) #bottomArea{transition:height .18s ease}
+@media(orientation:portrait){#gameRoot.compactHud #bottomArea{display:flex;grid-template-columns:none;grid-template-rows:none}#panelToggle{bottom:calc(var(--bottom-h) + 1px)}.perfPill{display:none}.sitePill .statusLabel{display:none}}
+@media(max-width:850px) and (orientation:landscape){.perfPill,.sitePill .statusLabel{display:none}.topActions{gap:3px}#soundBtn{padding:3px;min-width:28px}}
+@media(max-width:380px) and (orientation:portrait){.sitePill{display:none}#soundBtn{padding:3px;min-width:28px}}
+
+.doctrineInfo{margin:5px 0 0;min-height:20px;font-size:10px;color:#aed1cb;text-align:center;line-height:1.5}.configRow{align-items:start}
