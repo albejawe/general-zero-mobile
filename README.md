@@ -25,9 +25,10 @@ python build_offline.py
 python test_game.py
 python test_touch.py
 node test_pwa.cjs
+python test_pwa_browser.py
 ```
 
-`test_game` covers 9 map/difficulty combinations, 4 screen sizes, saving/loading a live match, and 4v4 >150 units simulated. `test_touch` uses real simulated taps in both orientations. `test_pwa` checks update lifecycle with a mocked service worker. **Safari iPhone/real Android performance and actual PWA version migration remain unverified**.
+`test_game` covers 9 map/difficulty combinations, 4 screen sizes, saving/loading a live match, and 4v4 >150 units simulated. `test_touch` uses real simulated taps in both orientations. `test_pwa.cjs` checks the mocked service worker; `test_pwa_browser.py` validates a REAL Chromium service-worker install, offline reload, a normal version update without reinstalling, and preservation of a live match across a second update. **Safari iPhone and real Android performance/PWA migration remain unverified**.
 
 ## Project structure
 
@@ -35,7 +36,7 @@ node test_pwa.cjs
 - `sprite_atlas.png`, `build_sprites.py`: original, generated 21-tile sprite atlas (7 roles × 3 factions).
 - `sw.js`, `pwa.js`, `manifest.webmanifest`: PWA installation, caching and version updates.
 - `ZERO_FRONTIER_OFFLINE.html`: generated standalone file (includes inline JS/CSS/sprite atlas).
-- `test_game.py`, `test_touch.py`, `test_pwa.cjs`: automated checks.
+- `test_game.py`, `test_touch.py`, `test_pwa.cjs`, `test_pwa_browser.py`: automated checks.
 - `MASTER_GAME_PLAN_AR.md`: long-term acceptance gates.
 - `RELEASE_REPORT_AR.md`: scope, tests, unfinished work.
 
