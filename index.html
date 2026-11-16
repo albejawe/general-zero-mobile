@@ -7,10 +7,12 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="General Zero Mobile - معارك استراتيجية كاملة للمتصفح، عمودي أو أفقي، تعمل دون إنترنت.">
-  <link rel="manifest" href="manifest.webmanifest?v=3.0.0">
+  <meta name="description" content="General Zero Mobile لعبة استراتيجية مستقلة، عمودي وأفقي، مع استكمال المباريات وتحديث PWA بلا إعادة تثبيت.">
+  
+  
+  <link rel="manifest" href="manifest.webmanifest?v=4.0.0">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=3.0.0">
+  <link rel="stylesheet" href="styles.css?v=4.0.0">
   <title>GENERAL ZERO MOBILE | قيادة المعركة</title>
 </head>
 <body>
@@ -18,7 +20,7 @@
   <canvas id="gameCanvas" aria-label="ساحة المعركة الاستراتيجية"></canvas>
   <div id="hud" class="hidden">
     <header id="topbar">
-      <div class="brand"><span class="brandBadge">GZ</span><span class="brandWords"><b>GENERAL <em>ZERO</em></b><small>MOBILE COMMAND • <span id="versionSmall">3.0</span></small></span></div>
+      <div class="brand"><span class="brandBadge">GZ</span><span class="brandWords"><b>GENERAL <em>ZERO</em></b><small>MOBILE COMMAND • <span id="versionSmall">3.1</span></small></span></div>
       <div class="statusPill gold"><span class="statIcon">◆</span><span class="statusLabel">الأرصدة</span><b id="money">0</b></div>
       <div class="statusPill incomePill"><span class="statIcon">↗</span><span class="statusLabel">الدخل</span><b id="income">+0/ث</b></div>
       <div class="statusPill"><span class="statIcon">▣</span><span class="statusLabel">الوحدات</span><b id="unitCount">0</b></div>
@@ -56,7 +58,7 @@
   <div id="startScreen" class="screen">
     <div class="menuBackdrop" aria-hidden="true"><div class="menuGrid"></div><div class="menuHorizon"></div><div class="menuSun"></div><div class="menuTerrain"></div></div>
     <div class="menuShell">
-      <div class="eyebrow"><span class="liveDot"></span> COMMAND OPERATIONS CENTER <span class="versionTag">v3.0</span></div>
+      <div class="eyebrow"><span class="liveDot"></span> COMMAND OPERATIONS CENTER <span class="versionTag">v3.1</span></div>
       <div class="menuTitle"><div class="menuLogo">GZ<span>•</span></div><div><h1>GENERAL <span>ZERO</span></h1><div class="menuSub">MOBILE <b>TACTICAL WARFARE</b></div></div></div>
       <p class="tagline">سيطر على المراكز الاستراتيجية • استطلع الضباب • اصنع الجيوش • اكسب الحرب</p>
       <div class="configTitle">01 / اختر ساحة المعركة</div>
@@ -76,14 +78,16 @@
         </div></div>
       </div>
       <button id="startBtn" class="primary">بدء العملية <span>←</span></button>
+      <button id="continueBtn" class="resumeBtn hidden">↶ استكمال المعركة المحفوظة</button>
       <div class="menuFooter"><span>◉ تخطيط تكتيكي لحظي</span><span>◉ لمس / فأرة</span><span>◉ عمودي + أفقي</span><span>◉ أوفلاين</span></div>
     </div>
   </div>
   <div id="endScreen" class="screen hidden"><div class="endPanel"><div id="endIcon">✦</div><div class="eyebrow">MISSION REPORT</div><h2 id="endTitle"></h2><p id="endDetails"></p><button id="restartBtn" class="primary">معركة جديدة ↻</button></div></div>
-  <div id="pauseOverlay" class="hidden"><div class="pauseCard"><span class="eyebrow">COMMAND PAUSED</span><h2>المعركة متوقفة</h2><p>خذ وقتك، القوات بانتظار أوامرك.</p><button id="resumeBtn" class="primary">متابعة المعركة ▶</button><button id="exitBtn" class="secondary">العودة للقائمة</button></div></div>
-  <div id="updateToast" class="hidden" role="status"><span>✦ يوجد إصدار جديد للعبة</span><button id="updateNow">تحديث الآن</button></div>
+  <div id="pauseOverlay" class="hidden"><div class="pauseCard"><span class="eyebrow">COMMAND PAUSED</span><h2>المعركة متوقفة</h2><p>خذ وقتك، القوات بانتظار أوامرك.</p><button id="resumeBtn" class="primary">متابعة المعركة ▶</button><button id="saveBtn" class="secondary">💾 حفظ المباراة</button><button id="exitBtn" class="secondary">العودة للقائمة</button></div></div>
+  <div id="updateToast" class="hidden" role="status"><span>✦ يوجد تحديث جديد — تُحفظ المباراة أولاً</span><button id="updateNow">حفظ وتحديث</button><button id="updateLater">لاحقاً</button></div>
 </div>
-<script src="game.js?v=3.0.0"></script>
-<script src="pwa.js?v=3.0.0" defer></script>
+<script src="game.js?v=4.0.0"></script>
+<script src="pwa.js?v=4.0.0" defer></script>
+
 </body>
 </html>

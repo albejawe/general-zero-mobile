@@ -1,4 +1,4 @@
-/* GENERAL ZERO MOBILE v3 — original responsive RTS. No external dependencies. */
+/* GENERAL ZERO MOBILE v4 — browser RTS, update-safe saves, tactical AI and mobile UI. */
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
@@ -9,7 +9,16 @@ const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y), hypot=(x,y)=>Math.hypot(x,y);
 const rand=(a,b)=>a+Math.random()*(b-a);
 const fmt=n=>Math.floor(n).toLocaleString('en-US');
 const COLORS={friendly:'#56d5b3',enemy:'#f18a76',neutral:'#e4c47e'};
-const GAME_VERSION='3.0.0';
+const SPRITE_TYPES=['infantry','rocket','scout','tank','artillery','special','gunship'];
+const SPRITE_FACTIONS=['alliance','legion','rebels'];
+const SPRITE_SIDE=176;
+let spriteLoaded=false;
+const spriteAtlas=new Image();
+spriteAtlas.onload=()=>{spriteLoaded=true;};
+spriteAtlas.onerror=()=>{spriteLoaded=false;};
+spriteAtlas.src='sprite_atlas.png?v=4.0.0';
+
+const GAME_VERSION='4.0.0';
 // Every role has a purpose: scouts reveal, infantry counters infantry, rockets counter armour,
 // tanks survive direct fire, and artillery breaks entrenched buildings.
 const DAMAGE_TABLE={
@@ -80,9 +89,9 @@ function costOf(p,type,isBuilding=false){
 }
 
 const MAPS={
- duel:{name:'وادي الرماد',size:[1860,1130],n:1,ground:'#847259',shade:'#a28b65',theme:'desert'},
- squads:{name:'حدود الحديد',size:[2420,1380],n:2,ground:'#62766b',shade:'#84907c',theme:'hills'},
- war:{name:'العاصفة الكبرى',size:[3320,1690],n:4,ground:'#737b72',shade:'#9c9c84',theme:'plateau'}
+ duel:{name:'وادي الرماد',size:[2150,1250],n:1,ground:'#847259',shade:'#a28b65',theme:'desert'},
+ squads:{name:'حدود الحديد',size:[2710,1510],n:2,ground:'#62766b',shade:'#84907c',theme:'hills'},
+ war:{name:'العاصفة الكبرى',size:[3510,1830],n:4,ground:'#737b72',shade:'#9c9c84',theme:'plateau'}
 };
 let choice={map:'duel',faction:'alliance',diff:'normal'};
 let g=null,lastFrame=performance.now(),raf=0,simAccumulator=0,uiTimer=0, notificationUntil=0,mouse={x:0,y:0,worldX:0,worldY:0}, drag=null,pointers=new Map(),pinch=null, uid=1;
@@ -118,8 +127,76 @@ function getStartPositions(map){
  let ys=map.n===1?[.5]:map.n===2?[.34,.71]:[.13,.375,.635,.875];
  return {left:ys.map(y=>({x:map.size[0]*.105,y:map.size[1]*y})),right:ys.map(y=>({x:map.size[0]*.895,y:map.size[1]*y}))};
 }
+// Single-player match snapshot. Canonical entity IDs preserve references without cycles.
+const SAVE_KEY='general-zero-mobile-save-v1';
+let lastSaveAt=-100,savePending=false;
+function hasSavedMatch(){
+ try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');return !!(s?.schema===1&&s?.choice&&Array.isArray(s.players)&&Array.isArray(s.units));}catch(err){return false;}
+}
+function refreshContinueButton(){const b=$('continueBtn');if(b)b.classList.toggle('hidden',!hasSavedMatch());}
+function clearSavedMatch(){try{localStorage.removeItem(SAVE_KEY);}catch(err){}refreshContinueButton();}
+function encodeExploration(seen){
+ const bits=new Uint8Array(Math.ceil(seen.length/8));
+ for(let i=0;i<seen.length;i++)if(seen[i])bits[i>>3]|=1<<(i&7);
+ let data='';for(let i=0;i<bits.length;i++)data+=String.fromCharCode(bits[i]);
+ return btoa(data);
+}
+function decodeExploration(encoded,seen){
+ try{const data=atob(encoded);for(let i=0;i<seen.length;i++)seen[i]=!!(data.charCodeAt(i>>3)&(1<<(i&7)))?1:0;return true;}
+ catch(e){return false;}
+}
+function saveMatch(){
+ if(!g||g.over)return false;
+ try{
+  const plainPlayer=p=>{const out={...p,hqId:p.hq?.id??null};delete out.hq;return out;};
+  const plainBuilding=b=>{const out={...b,playerId:b.p.id,linkedNodeIndex:b.linkedNode?g.world.nodes.indexOf(b.linkedNode):-1};delete out.p;delete out.linkedNode;return out;};
+  const plainUnit=u=>{const out={...u,playerId:u.p.id,targetId:u.target?.id??null};delete out.p;delete out.target;return out;};
+  const plainProjectile=q=>{const out={...q,targetId:q.target?.id??null,sourceId:q.source?.id??null};delete out.target;delete out.source;return out;};
+  const payload={schema:1,at:Date.now(),choice:{...choice},uid,time:g.time,diff:g.diff,cam:{...g.cam},players:g.players.map(plainPlayer),buildings:g.buildings.filter(b=>b.alive).map(plainBuilding),units:g.units.filter(u=>u.alive).map(plainUnit),projectiles:g.projectiles.filter(q=>q.alive).map(plainProjectile),outposts:g.world.outposts.map(o=>({owner:o.owner,pressure:o.pressure,contested:o.contested})),seenBits:encodeExploration(g.fog?.seen||new Uint8Array()),decals:g.decals.slice(-70),strikes:g.strikes,command:{...g.command},selected:g.selected.map(u=>u.id),selectedBuildingId:g.selectedBuilding?.id??null,tab:g.tab,attackMove:g.attackMove,spawned:g.spawned,destroyed:g.destroyed,kills:g.kills};
+  localStorage.setItem(SAVE_KEY,JSON.stringify(payload));lastSaveAt=g.time;savePending=false;refreshContinueButton();return true;
+ }catch(error){console.warn('Unable to save match',error);return false;}
+}
+function scheduleSave(){
+ if(!g||g.over||savePending)return;
+ lastSaveAt=g.time;savePending=true;
+ const pendingGame=g;
+ const task=()=>{savePending=false;if(g===pendingGame&&!g.over)saveMatch();};
+ if('requestIdleCallback' in window)requestIdleCallback(task,{timeout:2500});else setTimeout(task,60);
+}
+function continueMatch(){
+ let s;try{s=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');}catch(err){clearSavedMatch();return false;}
+ if(!s||s.schema!==1||!MAPS[s.choice?.map]||!['alliance','legion','rebels'].includes(s.choice?.faction)||!['easy','normal','hard'].includes(s.choice?.diff)||!Array.isArray(s.players)||!Array.isArray(s.units)||!Array.isArray(s.buildings)){clearSavedMatch();return false;}
+ try{
+  choice={...s.choice};newGame();
+  const playerById=new Map(g.players.map(p=>[p.id,p]));
+  if(s.players.length!==g.players.length)throw Error('Saved map player count differs');
+  for(const old of s.players){const p=playerById.get(old.id);if(!p)throw Error('Unknown player');const {hqId,...rest}=old;Object.assign(p,rest);p.hq=null;}
+  g.buildings=[];g.units=[];g.projectiles=[];g.particles=[];
+  for(const node of g.world.nodes)node.mine=null;
+  const refs=new Map();
+  for(const source of s.buildings){const p=playerById.get(source.playerId);if(!p||!Number.isFinite(source.x)||!Number.isFinite(source.y))continue;
+   const {playerId,linkedNodeIndex,...props}=source;const b={...props,p,linkedNode:null};g.buildings.push(b);refs.set(b.id,b);
+   if(Number.isInteger(linkedNodeIndex)&&linkedNodeIndex>=0&&linkedNodeIndex<g.world.nodes.length){b.linkedNode=g.world.nodes[linkedNodeIndex];b.linkedNode.mine=b;}
+  }
+  for(const source of s.units){const p=playerById.get(source.playerId);if(!p||!TYPES[source.type]||!Number.isFinite(source.x)||!Number.isFinite(source.y))continue;
+   const {playerId,targetId,...props}=source;const u={...props,p,target:null};g.units.push(u);refs.set(u.id,u);u._savedTargetId=targetId;
+  }
+  for(const u of g.units){if(u._savedTargetId!=null)u.target=refs.get(u._savedTargetId)||null;delete u._savedTargetId;}
+  for(const pState of s.players){const p=playerById.get(pState.id);p.hq=refs.get(pState.hqId)||null;}
+  for(const source of s.projectiles||[]){const {targetId,sourceId,...props}=source;const target=refs.get(targetId),source=refs.get(sourceId);if(target&&source)g.projectiles.push({...props,target,source});}
+  for(let i=0;i<g.world.outposts.length;i++){const o=s.outposts?.[i];if(o){g.world.outposts[i].owner=Number(o.owner)||0;g.world.outposts[i].pressure=Number(o.pressure)||0;g.world.outposts[i].contested=!!o.contested;}}
+  g.time=Math.max(0,Number(s.time)||0);g.diff=s.diff||choice.diff;g.decals=Array.isArray(s.decals)?s.decals.slice(-70):[];g.strikes=Array.isArray(s.strikes)?s.strikes:[];g.command=s.command||{bombard:0,reinforce:0};g.tab=s.tab||'build';g.attackMove=!!s.attackMove;g.selected=(s.selected||[]).map(id=>refs.get(id)).filter(u=>u&&u.type in TYPES&&u.p.id===0);g.selectedBuilding=refs.get(s.selectedBuildingId)||null;g.spawned=Number(s.spawned)||g.units.length;g.destroyed=Number(s.destroyed)||0;g.kills=Number(s.kills)||0;
+  uid=Math.max(Number(s.uid)||0,...[...refs.keys()].map(v=>Number(v)+1),2);
+  if(g.fog){if(typeof s.seenBits==='string')decodeExploration(s.seenBits,g.fog.seen);
+   else if(Array.isArray(s.seen)){const length=Math.min(g.fog.seen.length,s.seen.length);for(let i=0;i<length;i++)g.fog.seen[i]=s.seen[i]?1:0;}}
+  updateFog(true);g.cam={...g.cam,...s.cam};limitCam();g.paused=false;g.over=false;g.uiDirty=true;lastSaveAt=g.time;updateUI(true);
+  $('pauseOverlay').classList.add('hidden');$('startScreen').classList.add('hidden');$('endScreen').classList.add('hidden');$('hud').classList.remove('hidden');
+  notify('تم استكمال العملية من آخر نقطة محفوظة');return true;
+ }catch(error){console.error('Unable to restore match',error);g=null;$('hud').classList.add('hidden');$('startScreen').classList.remove('hidden');clearSavedMatch();return false;}
+}
+
 function newGame(){
- uid=1;simAccumulator=0; const m=MAPS[choice.map], world=tileMap(m), pos=getStartPositions(m);
+ uid=1;simAccumulator=0;savePending=false; const m=MAPS[choice.map], world=tileMap(m), pos=getStartPositions(m);
  const players=[];
  for(let i=0;i<m.n*2;i++){
   let team=i<m.n?0:1,loc=team?pos.right[i-m.n]:pos.left[i];
@@ -135,13 +212,13 @@ function newGame(){
   if(p.id===0)createUnit('scout',p,p.start.x+sign*128,p.start.y+6,true);
   else {
     createBuilding('barracks',p,p.start.x+sign*138,p.start.y-68,true);
-    p.money-=180;
+    p.money-=costOf(p,'barracks',true);
   }
  }
  resizeCanvas();
  initFog();cacheStaticTerrain();
  const viewport=size();g.cam.zoom=viewport.h>viewport.w?.90:1;
- $('versionSmall').textContent='3.0';
+ $('versionSmall').textContent=GAME_VERSION;
  if($('mapName'))$('mapName').textContent=m.name;
  if($('soundBtn'))$('soundBtn').textContent=audioEnabled?'♫':'♪';
  centerCamera(players[0].start.x+Math.min(155,viewport.w*.18),players[0].start.y);updateUI(true);
@@ -150,9 +227,9 @@ function newGame(){
  /* Landscape and portrait are both first-class play modes. */
 }
 function createBuilding(type,p,x,y,instant=false){
- const def=type==='hq'?{hp:1700,r:58,name:'المقر الرئيسي'}:BUILDINGS[type];
+ const def=type==='hq'?{hp:2350,r:58,name:'المقر الرئيسي'}:BUILDINGS[type];
  let b={id:uid++,type,p,x,y,hp:def.hp,max:def.hp,r:def.r,alive:true,complete:instant?1:0,buildTime:def.buildTime||1,queue:[],cool:0,linkedNode:null,rally:null,repairing:false};
- g.buildings.push(b);
+ g.buildings.push(b);g.world.nav=null;
  if(type==='mine'){
   let n=g.world.nodes.find(v=>hypot(x-v.x,y-v.y)<85 && (!v.mine||!v.mine.alive));
   if(n){n.mine=b;b.linkedNode=n;}
@@ -172,8 +249,8 @@ function createUnit(type,p,x,y,instant=false){
  }
  g.units.push(u);g.spawned++;g.uiDirty=true;return u;
 }
-function incomeOf(p){let n=0;for(const b of g.buildings){if(b.alive && b.p===p&&b.complete>=1){if(b.type==='hq')n+=8;if(b.type==='mine'&&b.linkedNode)n+=16;}}
- n+=g.world.outposts.filter(o=>o.owner===p.team).length*7/Math.max(1,g.players.filter(v=>v.team===p.team&&v.hq?.alive).length);
+function incomeOf(p){let n=0;for(const b of g.buildings){if(b.alive && b.p===p&&b.complete>=1){if(b.type==='hq')n+=6;if(b.type==='mine'&&b.linkedNode)n+=13;}}
+ n+=g.world.outposts.filter(o=>o.owner===p.team).length*5/Math.max(1,g.players.filter(v=>v.team===p.team&&v.hq?.alive).length);
  return n;
 }
 function buildingsOf(p,type){return g.buildings.filter(b=>b.alive&&b.complete>=1&&b.p===p&&b.type===type);}
@@ -199,7 +276,7 @@ function manageBuilding(p,action){
  }else if(action==='sell'){
   const value=Math.floor((BUILDINGS[b.type]?.cost||0)*.50*(b.hp/b.max));
   p.money+=value;b.alive=false;b.hp=0;b.repairing=false;
-  if(b.linkedNode)b.linkedNode.mine=null;
+  if(b.linkedNode)b.linkedNode.mine=null;g.world.nav=null;
   g.selectedBuilding=null;notify('تم بيع المنشأة واسترجاع '+value+' رصيد');
  }else return false;
  g.uiDirty=true;return true;
@@ -253,14 +330,18 @@ function tickStrikes(dt){
  }
  for(const key of Object.keys(g.command))g.command[key]=Math.max(0,g.command[key]-dt);
 }
-function isBlocked(x,y,r=12){return g.world.rocks.some(o=>hypot(x-o.x,y-o.y)<o.r+r+6);}
+function isBlocked(x,y,r=12,ignore=null){
+ if(g.world.rocks.some(o=>hypot(x-o.x,y-o.y)<o.r+r+4))return true;
+ return g.buildings.some(b=>b.alive&&b!==ignore&&hypot(x-b.x,y-b.y)<b.r+r+5);
+}
 const CELL=66;
 function navGrid(){
  const world=g.world;
  if(world.nav)return world.nav;
  const cols=Math.ceil(world.W/CELL),rows=Math.ceil(world.H/CELL),blocked=new Uint8Array(cols*rows);
  for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
-  if(world.rocks.some(r=>hypot((x+.5)*CELL-r.x,(y+.5)*CELL-r.y)<r.r+29))blocked[y*cols+x]=1;
+  const px=(x+.5)*CELL,py=(y+.5)*CELL;
+  if(world.rocks.some(r=>hypot(px-r.x,py-r.y)<r.r+28)||g.buildings.some(b=>b.alive&&hypot(px-b.x,py-b.y)<b.r+20))blocked[y*cols+x]=1;
  }
  world.nav={cols,rows,blocked};return world.nav;
 }
@@ -296,7 +377,7 @@ function pathfind(sx,sy,tx,ty){
  if(!found)return [{x:tx,y:ty}];
  const pts=[];let cur=end,lim=0;
  while(cur!==start&&cur!==-1&&lim++<300){pts.push({x:(cur%cols+.5)*CELL,y:(Math.floor(cur/cols)+.5)*CELL});cur=parents[cur];}
- pts.reverse();pts.push({x:tx,y:ty});
+ pts.reverse();if(!isBlocked(tx,ty,12))pts.push({x:tx,y:ty});
  const out=[];let anchor={x:sx,y:sy};for(let i=0;i<pts.length;){let last=i;for(let j=i+1;j<pts.length;j++)if(clearLine(anchor,pts[j]))last=j;else break;out.push(pts[last]);anchor=pts[last];i=last+1;}
  return out;
 }
@@ -334,6 +415,10 @@ function issueTacticalOrder(type){
 }
 function spawnPing(x,y,color){for(let i=0;i<9;i++)g.particles.push({x,y,vx:Math.cos(i*TAU/9)*80,vy:Math.sin(i*TAU/9)*80,life:.45,max:.45,color,size:3});}
 function damage(ent,amount,source){if(!ent.alive)return;
+ if(ent.type==='infantry'||ent.type==='rocket'){
+  const shelter=g.world.props.some(prop=>['barricade','ruin','container'].includes(prop.kind)&&hypot(ent.x-prop.x,ent.y-prop.y)<prop.r+39);
+  if(shelter)amount*=.74;
+ }
  ent.hp-=Math.max(0,amount);
  // Being attacked creates an emergency for an AI; a rally/retreat becomes possible.
  if(ent.p?.ai&&ent.p.hq?.alive&&ent.p===ent.p.hq.p)ent.p.lastThreat={x:ent.x,y:ent.y,time:g.time};
@@ -351,16 +436,31 @@ function damage(ent,amount,source){if(!ent.alive)return;
   sound(ent.queue||r>20?'blast':'cannon',ent.x,ent.y);for(let k=0;k<(ent.type==='hq'?38:ent.queue?16:8);k++){
   let angle=rand(0,TAU),spd=rand(20,190);g.particles.push({x:ent.x,y:ent.y,vx:Math.cos(angle)*spd,vy:Math.sin(angle)*spd,life:rand(.35,.95),max:1,color:Math.random()<.55?'#f8b76b':'#535456',size:rand(3,r*.30)});
  }if(ent.type==='hq'&&ent.p.hq===ent){ent.p.hq=null;notify(ent.p.team===0?'خسر حليف لنا مقره الرئيسي!':'دُمّر مقر أحد الأعداء!');}
+ if(ent.queue)g.world.nav=null;
  if(ent.p.team===1)g.destroyed++;
  g.uiDirty=true;
  }}
+function canTeamSee(team,target){
+ if(target.p?.team===team||!g.fog)return true;
+ const f=g.fog,x=Math.floor(target.x/FOG_CELL),y=Math.floor(target.y/FOG_CELL);
+ if(x<0||y<0||x>=f.w||y>=f.h)return false;
+ return !!(team===0?f.visible[y*f.w+x]:f.enemyVisible[y*f.w+x]);
+}
+function hasLineOfFire(source,target){
+ if(['artillery','gunship'].includes(source.type))return true;
+ const ax=source.x,ay=source.y,bx=target.x,by=target.y,dx=bx-ax,dy=by-ay,len2=dx*dx+dy*dy||1;
+ const intercept=o=>{let t=((o.x-ax)*dx+(o.y-ay)*dy)/len2;t=clamp(t,0,1);
+  const px=ax+t*dx,py=ay+t*dy;return t>.10&&t<.92&&(o.x-px)*(o.x-px)+(o.y-py)*(o.y-py)<(o.r+4)*(o.r+4);};
+ if(g.world.rocks.some(intercept))return false;
+ return !g.buildings.some(b=>b.alive&&b!==source&&b!==target&&intercept(b));
+}
 function closestEnemy(ent,radius){
  let best=null,score=Infinity;
  const table=DAMAGE_TABLE[ent.type]||DAMAGE_TABLE.turret;
  for(const item of [g.units,g.buildings])for(const target of item){
-  if(!target.alive||target.p.team===ent.p.team)continue;
+  if(!target.alive||target.p.team===ent.p.team||!canTeamSee(ent.p.team,target))continue;
   if(target.type==='gunship'&&!['rocket','infantry','turret','gunship'].includes(ent.type))continue;
-  const d=distance(target,ent)-target.r;if(d>=radius)continue;
+  const d=distance(target,ent)-target.r;if(d>=radius||!hasLineOfFire(ent,target))continue;
   const armour=target.queue?'building':(TYPES[target.type]?.kind||'building');
   let priority=table[armour]||1;
   let rating=d+45/Math.max(.3,priority)-Math.min(110,priority*35);
@@ -381,7 +481,7 @@ function tickUnits(dt){
   u.cool-=dt;
   if(u.target&&!u.target.alive)u.target=null;
   let enemy=closestEnemy(u,u.range+185);
-  let target=u.target && u.target.alive?u.target:enemy;
+  let target=u.target && u.target.alive&&canTeamSee(u.p.team,u.target)&&hasLineOfFire(u,u.target)?u.target:enemy;
   if(target){let d=distance(u,target);if(d<=u.range+target.r){
     if(u.cool<=0){fireProjectile(u,target,u.dmg,u.splash||TYPES[u.type].splash||0);u.cool=u.fire;u.gun=.16;}
     u.theta=Math.atan2(target.y-u.y,target.x-u.x);
@@ -458,7 +558,11 @@ function tickBuildings(dt){
     for(let t=0;t<8&&(isBlocked(x,y,18)||g.buildings.some(a=>a.alive&&distance(a,{x,y})<a.r+20));t++){x=b.x+Math.cos(t*TAU/8)*(b.r+45);y=b.y+Math.sin(t*TAU/8)*(b.r+45);}
     let u=createUnit(q.type,b.p,clamp(x,20,g.world.W-20),clamp(y,20,g.world.H-20));
     if(b.rally&&!b.p.ai){u.goal={...b.rally};u.path=pathfind(u.x,u.y,u.goal.x,u.goal.y);u.order='move';}
-    if(b.p.ai){const dest=findStrategicTarget(b.p);if(dest){u.goal={x:dest.x,y:dest.y};u.path=pathfind(u.x,u.y,dest.x,dest.y);u.order='attack';}}
+    if(b.p.ai){const sign=b.p.team?-1:1;const hx=b.p.hq?.x??b.p.start.x,hy=b.p.hq?.y??b.p.start.y;
+      const stageX=clamp(hx+sign*200+rand(-35,35),35,g.world.W-35);
+      const stageY=clamp(hy+rand(-110,110),35,g.world.H-35);
+      u.goal={x:stageX,y:stageY};u.path=pathfind(u.x,u.y,stageX,stageY);u.order='move';
+    }
     b.queue.shift();g.uiDirty=true;
    }}
  }
@@ -475,27 +579,27 @@ const FOG_CELL=55;
 function initFog(){
  const w=Math.ceil(g.world.W/FOG_CELL),h=Math.ceil(g.world.H/FOG_CELL);
  const fogCanvas=document.createElement('canvas');fogCanvas.width=w;fogCanvas.height=h;
- g.fog={w,h,seen:new Uint8Array(w*h),visible:new Uint8Array(w*h),canvas:fogCanvas,ctx:fogCanvas.getContext('2d'),revision:0};
+ g.fog={w,h,seen:new Uint8Array(w*h),visible:new Uint8Array(w*h),enemyVisible:new Uint8Array(w*h),canvas:fogCanvas,ctx:fogCanvas.getContext('2d'),revision:0};
  updateFog(true);
 }
 function updateFog(force=false){
  if(!g?.fog)return;
- const f=g.fog;f.visible.fill(0);
- const reveal=(x,y,r)=>{
+ const f=g.fog;f.visible.fill(0);f.enemyVisible.fill(0);
+ const reveal=(x,y,r,team)=>{
   const x0=Math.max(0,Math.floor((x-r)/FOG_CELL)),y0=Math.max(0,Math.floor((y-r)/FOG_CELL)),
   x1=Math.min(f.w-1,Math.floor((x+r)/FOG_CELL)),y1=Math.min(f.h-1,Math.floor((y+r)/FOG_CELL));
   for(let yy=y0;yy<=y1;yy++)for(let xx=x0;xx<=x1;xx++){
    const mx=(xx+.5)*FOG_CELL,my=(yy+.5)*FOG_CELL;if((mx-x)**2+(my-y)**2<r*r){
-    const i=yy*f.w+xx;f.seen[i]=1;f.visible[i]=1;
+    const i=yy*f.w+xx;if(team===0){f.seen[i]=1;f.visible[i]=1;}else f.enemyVisible[i]=1;
    }
   }
  };
- for(const e of [...g.units,...g.buildings])if(e.alive&&e.p.team===0&&(!e.queue||e.complete>=.9))reveal(e.x,e.y,VISION[e.type]||280);
- for(const o of g.world.outposts)if(o.owner===0)reveal(o.x,o.y,360);
+ for(const e of [...g.units,...g.buildings])if(e.alive&&(!e.queue||e.complete>=.9))reveal(e.x,e.y,VISION[e.type]||280,e.p.team);
+ for(const o of g.world.outposts)if(o.owner>=0)reveal(o.x,o.y,360,o.owner);
  const im=f.ctx.createImageData(f.w,f.h),d=im.data;
  for(let i=0;i<f.w*f.h;i++){
   const a=i*4;if(f.visible[i])d[a+3]=0;else{
-   d[a]=8;d[a+1]=18;d[a+2]=24;d[a+3]=f.seen[i]?105:155;
+   d[a]=8;d[a+1]=18;d[a+2]=24;d[a+3]=f.seen[i]?35:70;
   }
  }
  f.ctx.putImageData(im,0,0);f.revision++;
@@ -512,7 +616,7 @@ function tickOutposts(dt){
   const contested=a>0&&b>0;o.contested=contested;
   if(contested||(!a&&!b))continue;
   const target=a>0?1:-1,pressure=target*Math.min(2,1+.20*Math.max(0,(target>0?a:b)-1));
-  o.pressure=clamp(o.pressure+pressure*dt/7,-1,1);
+  o.pressure=clamp(o.pressure+pressure*dt/9,-1,1);
   const previous=o.owner;
   o.owner=o.pressure>=.985?0:o.pressure<=-.985?1:-1;
   if(o.owner!==previous){
@@ -523,20 +627,21 @@ function tickOutposts(dt){
  }
 }
 function findStrategicTarget(p){
+ const anchor=p.hq?.alive?p.hq:p.start;
  const enemyTeam=p.team===0?1:0;
  const targets=g.world.outposts.filter(o=>o.owner!==p.team);
- const first=targets.sort((a,b)=>distance(a,p.hq)-distance(b,p.hq))[0];
- // Attack neutral/captured outposts during the expansion phase, switch to HQ after map control.
- if(first)return first;
+ const first=targets.sort((a,b)=>distance(a,anchor)-distance(b,anchor))[0];
+ // Secure supply early; after that, advance to enemy HQ with defensive diversions.
+ if(first&&(g.time<210||p.wave%4!==3))return first;
  // Exploration, clashes and map control first — no 50-second AI base-rush that ends the tutorial.
- if(g.time<125){return g.world.outposts.reduce((a,b)=>distance(a,p.hq)<distance(b,p.hq)?a:b);}
+ if(g.time<210){return g.world.outposts.reduce((a,b)=>distance(a,anchor)<distance(b,anchor)?a:b);}
  const enemies=g.players.filter(v=>v.team!==p.team&&v.hq?.alive);
  if(!enemies.length)return null;
- return enemies.reduce((a,b)=>distance(a.hq,p.hq)<distance(b.hq,p.hq)?a:b).hq;
+ return enemies.reduce((a,b)=>distance(a.hq,anchor)<distance(b.hq,anchor)?a:b).hq;
 }
 
 function tickAI(dt){
- const settings={easy:{speed:1.8,attack:6,ratio:.7},normal:{speed:1.05,attack:5,ratio:1},hard:{speed:.70,attack:4,ratio:1.2}}[g.diff];
+ const settings={easy:{speed:1.8,attack:8,ratio:.7},normal:{speed:1.05,attack:7,ratio:1},hard:{speed:.70,attack:6,ratio:1.2}}[g.diff];
  for(const p of g.players){if(!p.ai||!p.hq||!p.hq.alive)continue;
   p.think-=dt;if(p.think>0)continue;p.think=rand(1.1,2.1)*settings.speed;
   const owned=g.units.filter(u=>u.alive&&u.p===p), barracks=buildingsOf(p,'barracks'), factories=buildingsOf(p,'factory'),mines=buildingsOf(p,'mine'),airfields=buildingsOf(p,'airfield');
@@ -547,13 +652,20 @@ function tickAI(dt){
   if(g.time>52&&airfields.length<1&&p.money>1600){if(aiBuildNear(p,'airfield',p.hq.x,p.hq.y))continue;}
   if(g.diff==='hard'&&g.time>18&&buildingsOf(p,'turret').length<1&&p.money>750){aiBuildNear(p,'turret',p.hq.x,p.hq.y);continue;}
   if(g.diff==='hard'&&p.money>1350&&factories.length&&g.time>75){const missing=Object.keys(UPGRADES).filter(k=>!p.upgrades[k]);if(missing.length&&buyUpgrade(missing[0],p,true))continue;}
-  if(owned.length<23){
-   const type=airfields.length&&p.money>1000&&Math.random()<.18?'gunship':factories.length&&p.money>650?(Math.random()<.45?'tank':Math.random()<.25?'special':'scout'):(Math.random()<.27?'rocket':'infantry');
+  if(owned.length<COMBAT_CAP-3){
+   const visibleEnemies=g.units.filter(u=>u.alive&&u.p.team!==p.team&&canTeamSee(p.team,u));
+   const enemyAir=visibleEnemies.filter(u=>u.type==='gunship').length;
+   const enemyTanks=visibleEnemies.filter(u=>['tank','special','artillery'].includes(u.type)).length;
+   const myRockets=owned.filter(u=>u.type==='rocket').length;
+   const myTanks=owned.filter(u=>u.type==='tank').length;
+   let type=airfields.length&&p.money>1200&&Math.random()<.16?'gunship':factories.length&&p.money>700?(Math.random()<.43?'tank':Math.random()<.20?'special':'scout'):(Math.random()<.32?'rocket':'infantry');
+   if((enemyAir>0||enemyTanks>myTanks+2)&&myRockets<Math.max(3,Math.ceil(enemyAir*1.4)))type='rocket';
+   if(visibleEnemies.filter(u=>u.type==='rocket').length>myRockets+2&&factories.length&&p.money>350)type='scout';
    buyUnit(type,p,true);
    if(settings.ratio>1&&Math.random()<.35)buyUnit('infantry',p,true);
   }
   let ready=owned.filter(u=>u.order==='guard'||u.order==='move'||!u.goal);const targets=g.players.filter(v=>v.team!==p.team&&v.hq&&v.hq.alive);
-  if(ready.length>=Math.max(3,settings.attack-2)&&targets.length){
+  if(ready.length>=Math.max(3,settings.attack-2)&&targets.length){p.wave=(p.wave||0)+1;
    let dest=findStrategicTarget(p)||targets.reduce((a,b)=>distance(a.hq,p.hq)<distance(b.hq,p.hq)?a:b).hq;
    // Under attack, hold at home and repel the raiders before the next offensive wave.
    if(p.lastThreat&&g.time-p.lastThreat.time<13&&distance(p.lastThreat,p.hq)<420){
@@ -572,7 +684,7 @@ function tickAI(dt){
 function checkVictory(){if(g.over)return;
  const alive0=g.players.some(p=>p.team===0&&p.hq?.alive),alive1=g.players.some(p=>p.team===1&&p.hq?.alive);
  if(alive0&&alive1)return;
- g.over=true;g.paused=true;
+ g.over=true;g.paused=true;clearSavedMatch();
  const win=alive0&&!alive1;$('endIcon').textContent=win?'✦':'✕';$('endIcon').style.color=win?'#e3b66c':'#eb7d6a';
  $('endTitle').textContent=win?'انتصار ساحق!':'انتهت المعركة';
  $('endDetails').textContent=`${win?'دُمّرت جميع قواعد الخصم.':'تم تدمير جميع قواعد فريقك.'} الوقت ${formatClock(g.time)} • أهداف مدمّرة ${g.destroyed}`;
@@ -580,6 +692,7 @@ function checkVictory(){if(g.over)return;
 }
 function tick(dt){
  g.time+=dt;
+ if(g.time-lastSaveAt>=35)scheduleSave();
  for(const p of g.players)if(p.hq?.alive){p.money+=incomeOf(p)*dt;}
  tickAI(dt);tickBuildings(dt);tickUnits(dt);tickProjectiles(dt);tickStrikes(dt);
  tickOutposts(dt);
@@ -657,7 +770,7 @@ function terrainRoad(path,width){
 function drawTerrain(){
  const world=g.world,w=world.W,h=world.H,c=g.cam,v=size();initTerrainGraphics(world);
  ctx.fillStyle=world.tile;ctx.fillRect(0,0,w,h);
- const left=c.x,top=c.y,right=left+v.w/c.zoom,bottom=top+v.h/c.zoom;
+ const left=g.terrainCaching?0:c.x,top=g.terrainCaching?0:c.y,right=g.terrainCaching?w.W:left+v.w/c.zoom,bottom=g.terrainCaching?h:top+v.h/c.zoom;
  // Deep landscape bands add depth to the lightweight overhead view.
  for(let i=0;i<7;i++){
   ctx.fillStyle=i%2?'#31453b0e':'#edcc9810';ctx.beginPath();
@@ -848,8 +961,19 @@ function drawUnit(u){if(!isDiscovered(u)||!isVisible(u.x,u.y,u.r*g.cam.zoom))ret
  const team=u.p.team?COLORS.enemy:COLORS.friendly,fac=FACTIONS[u.p.faction].color,r=u.r;
  ctx.save();ctx.translate(u.x,u.y);ctx.rotate(u.theta);
  ctx.fillStyle='#07191982';ctx.beginPath();ctx.ellipse(7,8,r*1.44,r*.81,0,0,TAU);ctx.fill();
- if(u.type==='gunship'){
-  // Airborne shadow offset and original multi-part gunship silhouette.
+ if(spriteLoaded){
+  const sx=SPRITE_TYPES.indexOf(u.type)*SPRITE_SIDE,sy=SPRITE_FACTIONS.indexOf(u.p.faction)*SPRITE_SIDE;
+  const sz=u.r*(u.type==='gunship'?4.9:u.type==='infantry'||u.type==='rocket'?5.3:4.5);
+  ctx.drawImage(spriteAtlas,sx,sy,SPRITE_SIDE,SPRITE_SIDE,-sz/2,-sz/2,sz,sz);
+  if(u.type==='gunship'){
+   ctx.save();ctx.translate(-2,-18);
+   ctx.rotate(g.time*22+u.id);
+   ctx.globalAlpha=.50;ctx.strokeStyle='#e5efdf';ctx.lineWidth=3.5;
+   ctx.beginPath();ctx.moveTo(-29,0);ctx.lineTo(29,0);ctx.moveTo(0,-27);ctx.lineTo(0,27);ctx.stroke();ctx.restore();
+  }
+ }else if(u.type==='gunship'){
+  // Fallback original vector if texture hasn't loaded.
+
   ctx.fillStyle='#05151a70';ctx.beginPath();ctx.ellipse(13,39,31,14,0,0,TAU);ctx.fill();
   ctx.translate(0,-21+Math.sin(g.time*3+u.id)*2);
   const shell=u.p.faction==='legion'?'#6a6554':u.p.faction==='rebels'?'#5c6261':'#435e62';
@@ -981,9 +1105,12 @@ function render(){const v=size(),c=g.cam,dpr=canvas.width/v.w;ctx.setTransform(d
  for(const b of g.buildings)drawBuilding(b);for(const u of g.units)drawUnit(u);
  drawCombat();drawFog();drawTactical();ctx.restore();
  drawMinimap();}
-function frame(now){raf=requestAnimationFrame(frame);let dt=Math.min(.04,(now-lastFrame)/1000||.016);lastFrame=now;
+let frameSamples=[],fpsAverage=60;
+function frame(now){raf=requestAnimationFrame(frame);const rawDt=Math.max(.001,(now-lastFrame)/1000||.016),dt=Math.min(.04,rawDt);lastFrame=now;
  if(!g)return;
- if($('fps'))$('fps').textContent=String(Math.round(1/Math.max(.01,dt)));
+ fpsAverage=fpsAverage*.92+(1/rawDt)*.08;
+ frameSamples.push(rawDt*1000);if(frameSamples.length>150)frameSamples.shift();
+ if($('fps'))$('fps').textContent=String(Math.round(fpsAverage));
  if(!g.paused&&dt>0){simAccumulator=Math.min(.14,simAccumulator+dt);const STEP=1/30;let steps=0;while(simAccumulator>=STEP&&steps<4){tick(STEP);simAccumulator-=STEP;steps++;if(g.paused)break;}}
  else simAccumulator=0;
  render();uiTimer+=dt;if(uiTimer>.22){updateUI(false);uiTimer=0;}
@@ -991,7 +1118,12 @@ function frame(now){raf=requestAnimationFrame(frame);let dt=Math.min(.04,(now-la
 }
 function actionButton(label,glyph,cost,kind,key,active,disabled=false){
  let b=document.createElement('button');b.className='action'+(active?' active':'');b.disabled=disabled;b.dataset.kind=kind;b.dataset.key=key;
- let a=document.createElement('span');a.className='glyph';a.textContent=glyph;let n=document.createElement('span');n.className='label';n.textContent=label;b.append(a,n);
+ let a=document.createElement('span');a.className='glyph';a.textContent=glyph;
+ if(kind==='unit'){
+  const col=SPRITE_TYPES.indexOf(key),row=SPRITE_FACTIONS.indexOf(g.players[0].faction);
+  if(col>=0&&row>=0){a.classList.add('unitSprite');a.textContent='';a.style.backgroundPosition=`-${col*28}px -${row*28}px`;b.title=label+' | صحة '+TYPES[key].hp+' | ضرر '+TYPES[key].dmg+' | مدى '+TYPES[key].range;}
+ }
+ let n=document.createElement('span');n.className='label';n.textContent=label;b.append(a,n);
  if(cost!==null){let t=document.createElement('span');t.className='cost';t.textContent='◈ '+cost;b.append(t);}return b;
 }
 function updateUI(force){if(!g)return;let p=g.players[0];$('money').textContent=fmt(p.money);$('income').textContent='+'+incomeOf(p)+'/ث';$('unitCount').textContent=g.units.filter(u=>u.alive&&u.p===p).length;
@@ -1115,7 +1247,8 @@ $('actionBar').addEventListener('click',ev=>{
 });
 function togglePause(v){if(!g||g.over)return;g.paused=v;simAccumulator=0;$('pauseOverlay').classList.toggle('hidden',!v);$('pauseBtn').textContent=v?'▶':'Ⅱ';}
 $('pauseBtn').onclick=()=>g&&togglePause(!g.paused);$('resumeBtn').onclick=()=>togglePause(false);
-$('exitBtn').onclick=()=>{if(g)g.paused=true;g=null;$('pauseOverlay').classList.add('hidden');$('hud').classList.add('hidden');$('startScreen').classList.remove('hidden');};
+$('saveBtn').onclick=()=>{if(saveMatch())notify('تم حفظ المعركة ويمكن استكمالها بعد إغلاق التطبيق');else notify('تعذر الحفظ — تحقق من مساحة التخزين');};
+$('exitBtn').onclick=()=>{if(g){g.paused=true;saveMatch();}g=null;$('pauseOverlay').classList.add('hidden');$('hud').classList.add('hidden');$('startScreen').classList.remove('hidden');};
 $('selectArea').onclick=()=>{if(!g||g.paused)return;g.selectionMode=!g.selectionMode;g.mode=null;$('selectArea').classList.toggle('active',g.selectionMode);notify(g.selectionMode?'اسحب مستطيلاً لتحديد مجموعة من الوحدات':'تم إلغاء التحديد بالمستطيل');};
 $('selectArmy').onclick=()=>{if(!g||g.paused)return;g.selected=g.units.filter(u=>u.alive&&u.p.id===0);g.selectedBuilding=null;g.mode=null;g.selectionMode=false;$('selectArea').classList.remove('active');g.uiDirty=true;updateUI(true);notify(g.selected.length?'تم تحديد '+g.selected.length+' وحدة':'أنتج وحدات أولاً');};
 $('attackMove').onclick=()=>{if(!g||g.paused)return;g.attackMove=!g.attackMove;g.uiDirty=true;notify(g.attackMove?'الأوامر الآن هجوم أثناء الحركة':'الأوامر الآن تحرك عادي');};
@@ -1129,11 +1262,12 @@ const frontBtn=$('centerFront');if(frontBtn)frontBtn.onclick=()=>{if(!g)return;
  if(pt){centerCamera(pt.x,pt.y);spawnPing(pt.x,pt.y,'#f3cf89');}
 };
 $('cancelMode').onclick=()=>{if(!g)return;g.mode=null;g.uiDirty=true;updateUI(true);};
-$('restartBtn').onclick=()=>{g=null;$('endScreen').classList.add('hidden');$('startScreen').classList.remove('hidden');};
+$('restartBtn').onclick=()=>{clearSavedMatch();g=null;$('endScreen').classList.add('hidden');$('startScreen').classList.remove('hidden');};
 for(const [container,key,attr] of [['mapChoices','map','map'],['factionChoices','faction','faction'],['difficultyChoices','diff','diff']]){
  $(container).addEventListener('click',ev=>{const b=ev.target.closest('button[data-'+attr+']');if(!b)return;choice[key]=b.dataset[attr];for(const c of $(container).children)c.classList.toggle('active',c===b);if(key==='faction'&&$('doctrineInfo'))$('doctrineInfo').textContent=FACTIONS[choice.faction].description;});
 }
-$('startBtn').onclick=()=>{sound('click');newGame();};
+$('startBtn').onclick=()=>{clearSavedMatch();sound('click');newGame();};
+$('continueBtn').onclick=()=>{if(!continueMatch())notify('تعذر استرجاع اللعبة السابقة');};
 const soundBtn=$('soundBtn');if(soundBtn)soundBtn.onclick=()=>{audioEnabled=!audioEnabled;soundBtn.textContent=audioEnabled?'♫':'♪';soundBtn.title=audioEnabled?'كتم المؤثرات':'تشغيل المؤثرات';if(audioEnabled)sound('click');};
 const panelBtn=$('panelToggle');if(panelBtn)panelBtn.onclick=()=>{
  const compact=$('gameRoot').classList.toggle('compactHud');panelBtn.textContent=compact?'▴':'▾';panelBtn.title=compact?'فتح لوحة الأوامر':'تصغير لوحة الأوامر';
@@ -1148,7 +1282,10 @@ window.addEventListener('keydown',ev=>{
  if(ev.key==='s'||ev.key==='S')issueTacticalOrder('hold');
  if(ev.key==='r'||ev.key==='R')issueTacticalOrder('retreat');
 });
-document.addEventListener('visibilitychange',()=>{if(g&&!document.hidden)lastFrame=performance.now();if(g&&document.hidden&&!g.over){g.paused=true;$('pauseOverlay').classList.remove('hidden');}});
-resizeCanvas();raf=requestAnimationFrame(frame);
-window.__zeroFrontier={get game(){return g;},start:(map='duel',diff='normal',faction='alliance')=>{choice={map,diff,faction};newGame();},buyBuilding:(t,x,y)=>g&&buyBuilding(t,g.players[0],x,y),buyUnit:(t)=>g&&buyUnit(t,g.players[0]),tick:(dt)=>g&&tick(dt),mapNames:Object.keys(MAPS),stats:()=>g&&({units:g.units.length,buildings:g.buildings.length,players:g.players.length,time:g.time,canvas:[canvas.width,canvas.height],upgrades:{...g.players[0].upgrades},cooldowns:{...g.command},outposts:g.world.outposts.map(o=>({owner:o.owner,pressure:o.pressure})),fogRevisions:g.fog?.revision,kills:g.kills,fps:Number($('fps')?.textContent||0)}),buyUpgrade:(key)=>g&&buyUpgrade(key,g.players[0]),callBombard:(x,y)=>g&&callBombard(g.players[0],x,y)};
+document.addEventListener('visibilitychange',()=>{if(g&&document.hidden&&!g.over)saveMatch();if(g&&!document.hidden)lastFrame=performance.now();if(g&&document.hidden&&!g.over){g.paused=true;$('pauseOverlay').classList.remove('hidden');}});
+window.addEventListener('pagehide',()=>{if(g&&!g.over)saveMatch();});
+resizeCanvas();refreshContinueButton();
+try{if(sessionStorage.getItem('gzmResumeAfterUpdate')==='1'){sessionStorage.removeItem('gzmResumeAfterUpdate');if(hasSavedMatch())continueMatch();}}catch(e){}
+raf=requestAnimationFrame(frame);
+window.__zeroFrontier={get game(){return g;},save:saveMatch,continue:continueMatch,hasSave:hasSavedMatch,start:(map='duel',diff='normal',faction='alliance')=>{choice={map,diff,faction};newGame();},buyBuilding:(t,x,y)=>g&&buyBuilding(t,g.players[0],x,y),buyUnit:(t)=>g&&buyUnit(t,g.players[0]),tick:(dt)=>g&&tick(dt),mapNames:Object.keys(MAPS),stats:()=>g&&({units:g.units.length,buildings:g.buildings.length,players:g.players.length,time:g.time,canvas:[canvas.width,canvas.height],upgrades:{...g.players[0].upgrades},cooldowns:{...g.command},outposts:g.world.outposts.map(o=>({owner:o.owner,pressure:o.pressure})),fogRevisions:g.fog?.revision,kills:g.kills,fps:Number($('fps')?.textContent||0),frameP95:frameSamples.length?[...frameSamples].sort((a,b)=>a-b)[Math.floor(frameSamples.length*.95)]:0}),buyUpgrade:(key)=>g&&buyUpgrade(key,g.players[0]),callBombard:(x,y)=>g&&callBombard(g.players[0],x,y)};
 })();

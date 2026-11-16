@@ -1,14 +1,42 @@
-# General Zero Mobile — Alpha 3.0
+# General Zero Mobile — Tactical RTS Alpha 4.0
 
-An original, mobile-first RTS for browser and PWA, with no proprietary game assets. This is an **alpha**, not a finished game equivalent to Command & Conquer Generals Zero Hour.
+An **original** single-player real-time strategy game for mobile browsers, playable in portrait or landscape. Inspired by classic base-building strategy (without using any commercial game's assets).
 
-## Included
-Three maps (1v1, 2v2, 4v4 vs computer), 3 factions with distinct doctrines, easy/medium/hard AI, tactical resource outposts, fog-of-war scouting, infantry/armour/air counterplay, gunships and airfields, unit ranks, construction, repairs, sales, tactical strikes, rally points, tactical hold/retreat/scatter commands, responsive portrait + landscape UI, touch controls, original audio effects and minimap.
+This is a working, tested **alpha**, not a polished commercial game and **not** a replica of Generals Zero Hour. The technical milestones and remaining art/gameplay work are documented rather than claimed complete.
 
-## Deploy to Vercel
-Import this repository; Framework **Other**, Root `./`, build command blank. Static HTML/CSS/JS files deploy directly. New pushes update the site when Git integration is enabled. PWA uses versioned network-first service worker and offline cache; no PWA reinstallation is needed. A running match prompts before applying a new version.
+## Play
+
+Open the deployed website, choose a faction/difficulty and play **1v1, 2v2 or 4v4**. All players other than you are AI (the game does **not** offer multiplayer networking). Three AI difficulty levels, supply outposts, exploration/fog, infantry/rocket/scout/tank/artillery/elite/air units, upgrades, repairs/sales, artillery strikes, formation selection, tactical commands, sound effects and save/continue.
+
+Use tabs **Build / Units / Upgrades / Support**. Build a refinery on a yellow crystal, then barracks, factories and an airfield. Hold supply points to increase income; use rockets against armour and air; use scouts to spot enemies.
+
+The **Save** button is in the pause menu. Progress autosaves periodically (and when the page goes into the background) to local browser storage. Installed PWA updates to a new version without reinstallation; a match in progress is saved before a reload when supported.
+
+## Deployment
+
+Vercel: import [this repository](https://github.com/albejawe/general-zero-mobile) as a static site. Framework **Other**, root `./`, no build command or environment variables. Once Git is linked, pushes to `main` deploy automatically.
 
 ## Tests
-Run `python build_offline.py`, then `python test_gameplay_v2.py` and `python test_gameplay_v3.py` with Python Playwright/Chromium installed. Check PWA behaviour manually on real iOS Safari and Android; this cannot be certified from browser simulation alone.
 
-See [Arabic gameplay](README_AR.md) and [rebuild plan](REBUILD_PLAN_AR.md).
+```bash
+python -m pip install playwright==1.57.0
+python -m playwright install chromium
+python build_offline.py
+python test_game.py
+python test_touch.py
+node test_pwa.cjs
+```
+
+`test_game` covers 9 map/difficulty combinations, 4 screen sizes, saving/loading a live match, and 4v4 >150 units simulated. `test_touch` uses real simulated taps in both orientations. `test_pwa` checks update lifecycle with a mocked service worker. **Safari iPhone/real Android performance and actual PWA version migration remain unverified**.
+
+## Project structure
+
+- `index.html`, `styles.css`, `game.js`: browser game source.
+- `sprite_atlas.png`, `build_sprites.py`: original, generated 21-tile sprite atlas (7 roles × 3 factions).
+- `sw.js`, `pwa.js`, `manifest.webmanifest`: PWA installation, caching and version updates.
+- `ZERO_FRONTIER_OFFLINE.html`: generated standalone file (includes inline JS/CSS/sprite atlas).
+- `test_game.py`, `test_touch.py`, `test_pwa.cjs`: automated checks.
+- `MASTER_GAME_PLAN_AR.md`: long-term acceptance gates.
+- `RELEASE_REPORT_AR.md`: scope, tests, unfinished work.
+
+All artwork/code in this repository is original. The game runs entirely locally in the browser without paid backend or external services; multiplayer mode is not implemented.

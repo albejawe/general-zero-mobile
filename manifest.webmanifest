@@ -1,16 +1,16 @@
 {
   "id": "/",
-  "name": "General Zero Mobile | عمليات عسكرية تكتيكية",
+  "name": "General Zero Mobile | القيادة العسكرية",
   "short_name": "General Zero",
-  "description": "لعبة استراتيجية مستقلة بثلاث جيوش وثلاث خرائط على الجوال بوضع عمودي وأفقي",
+  "description": "لعبة استراتيجية مستقلة للجوال عمودي وأفقي مع حفظ المعركة",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#071115",
   "theme_color": "#0b1519",
-  "dir": "rtl",
   "lang": "ar",
+  "dir": "rtl",
   "icons": [
     {
       "src": "icon.svg",
