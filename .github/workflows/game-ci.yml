@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   lint-and-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -27,3 +27,4 @@ jobs:
       - run: python test_game.py
       - run: python test_touch.py
       - run: node test_pwa.cjs
+      - run: python test_pwa_browser.py
